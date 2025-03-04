@@ -3,6 +3,7 @@
 *.jl.mem
 *.log
 *.lp
+!benchmark/model-lp-folder/*.lp
 *.rej
 .DS_Store
 .benchmarkci
