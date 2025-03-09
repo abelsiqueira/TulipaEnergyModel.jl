@@ -18,7 +18,7 @@ for folder in readdir("test/inputs"; join = true)
     con = DBInterface.connect(DuckDB.DB)
     schemas = TulipaEnergyModel.schema_per_table_name
     TulipaIO.read_csv_folder(con, folder; schemas)
-    TulipaEnergyModel.run_scenario(con; write_lp_file = true)
+    TulipaEnergyModel.run_scenario(con; write_lp_file = true, show_log = false)
 
     lp_filename = basename(folder) * ".lp"
     @info "Storing model.lp into $model_lp_folder/$lp_filename"
