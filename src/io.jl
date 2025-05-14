@@ -24,10 +24,20 @@ function create_internal_tables!(
     database_schema_name_override = Dict{Symbol,String}(),
     skip_validation = false,
 )
-    input_database_schema = get(database_schema_name_override, "input", "input")
     cluster_database_schema = get(database_schema_name_override, "cluster", "cluster")
+    input_database_schema = get(database_schema_name_override, "input", "input")
     for (schema_name, table) in TulipaEnergyModel.tables_allowed_to_be_missing
         _create_empty_unless_exists(connection, schema_name, table)
+    end
+    # Create a view of the cluster tables inside the input schema, because we
+    # can't create foreigh keys across schemas
+    for table_name in keys(TulipaEnergyModel.table_schemas["cluster"])
+        DuckDB.query(
+            connection,
+            "CREATE OR REPLACE VIEW
+            $input_database_schema.$table_name AS
+            FROM $cluster_database_schema.$table_name",
+        )
     end
 
     if !skip_validation
