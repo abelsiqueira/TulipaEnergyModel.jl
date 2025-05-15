@@ -216,8 +216,11 @@ end
         # Doesn't throw
         TEM.create_internal_tables!(connection)
 
-        DuckDB.query(connection, "UPDATE input.asset SET \"group\" = 'bad' WHERE asset = 'ccgt'")
-        @test_throws "Table 'input.asset' column 'group' has invalid value 'bad'. Valid values should be among column 'name' of 'input.group_asset'" TEM.create_internal_tables!(
+        DuckDB.query(
+            connection,
+            "UPDATE input.asset SET \"belongs_to_group\" = 'bad' WHERE asset = 'ccgt'",
+        )
+        @test_throws "Table 'input.asset' column 'belongs_to_group' has invalid value 'bad'. Valid values should be among column 'name' of 'input.group_asset'" TEM.create_internal_tables!(
             connection,
         )
     end
@@ -227,7 +230,7 @@ end
     @testset "Using fake data" begin
         asset = DataFrame(
             :asset => ["A1", "A2", "A3", "A4", "A5"],
-            :group => [missing, "good", "bad", "good", missing],
+            :belongs_to_group => [missing, "good", "bad", "good", missing],
         )
         group_asset = DataFrame(:name => ["good", "bad", "ugly"], :value => [1, 2, 3])
         connection = DBInterface.connect(DuckDB.DB)
@@ -236,7 +239,7 @@ end
 
         error_messages = TEM._validate_group_consistency!(connection)
         @test error_messages == [
-            "Group 'ugly' in 'input.group_asset' has no members in 'input.asset', column 'group'",
+            "Group 'ugly' in 'input.group_asset' has no members in 'input.asset', column 'belongs_to_group'",
         ]
     end
 
@@ -248,7 +251,7 @@ end
 
         # Modify group value to bad value
         DuckDB.query(connection, "INSERT INTO input.group_asset (name) VALUES ('lonely')")
-        @test_throws "Group 'lonely' in 'input.group_asset' has no members in 'input.asset', column 'group'" TEM.create_internal_tables!(
+        @test_throws "Group 'lonely' in 'input.group_asset' has no members in 'input.asset', column 'belongs_to_group'" TEM.create_internal_tables!(
             connection,
         )
     end

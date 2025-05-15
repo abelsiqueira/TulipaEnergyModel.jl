@@ -38,6 +38,8 @@ for (root, dirs, files) in walkdir(@__DIR__)
     end
 end
 
+# include("test-defaults.jl")
+
 # Other general tests that don't need their own file
 @testset "Ensuring benchmark loads" begin
     include(joinpath(@__DIR__, "..", "benchmark", "benchmarks.jl"))

@@ -1,25 +1,70 @@
 export populate_with_defaults!
 
 """
-    _query_to_complement_with_defaults(connection, database_schema, existing_table, table_schema)
+    _arguments_to_create_table(database_schema, table_schema)
 
-Creates a query to completement a given table `existing_table` with the defaults stored in `table_schema`.
+Return the string to complement the table creation and that informs the types,
+primary keys, and foreign keys.
 
-The `existing_table` should be a table in `connection`.
+The `table_name` should be a table in `connection`.
 
 The `table_schema` should be a dictionary from the column to a dictionary of the column properties.
 For instance, from `TulipaEnergyModel.table_schemas[table_name]`.
+"""
+function _arguments_to_create_table(database_schema, table_schema)
+    arguments = String[]
+    primary_keys = String[]
+    foreign_keys = String[]
+    for (col_name, column_data) in table_schema
+        push!(arguments, col_name * " " * column_data["type"])
+
+        is_primary_key = get(column_data, "primary_key", false)
+        if is_primary_key
+            push!(primary_keys, col_name)
+        end
+
+        is_foreign_key = haskey(column_data, "foreign_key")
+        # TODO: Since DuckDB does not allow foreign keys across schemas, we skip adding them. When they support it, we can update this
+        if !is_foreign_key || database_schema == "cluster"
+            continue
+        end
+        foreign_table_data = column_data["foreign_key"]
+        # Foreign keys between database schemas is not supported by DuckDB
+        # foreign_table = foreign_table_data["schema_name"] * "." * foreign_table_data["table_name"]
+        foreign_table = "input." * foreign_table_data["table_name"]
+        foreign_column = foreign_table_data["column_name"]
+        push!(foreign_keys, "FOREIGN KEY ($col_name) REFERENCES $foreign_table ($foreign_column)")
+    end
+    @assert length(primary_keys) > 0 # If there are no primary keys, we made a mistake in the .json. It is not a user error
+    primary_key = "PRIMARY KEY (" * join(primary_keys, ", ") * ")"
+    push!(arguments, primary_key)
+    if length(foreign_keys) > 0
+        append!(arguments, foreign_keys)
+    end
+
+    return join(arguments, ", ")
+end
+
+"""
+    _query_to_complement_with_defaults(connection, database_schema, table_name, table_schema)
+
+Creates a query to completement a given table `table_name` with the defaults stored in `table_schema`.
+
+The `table_name` should be a table in `connection`.
+
+The `table_schema` should be a dictionary from the column to a dictionary of the column properties.
+For instance, from `TulipaEnergyModel.table_schemas[database_schema][table_name]`.
 
 The output is the argument for a 'SELECT' query that selects all existing
-columns from `existing_table`, and selects the default value for all other
+columns from `table_name`, and selects the default value for all other
 columns given in `table_schema`.
 If a column in `table_schema` does not have a default and is not present in
-`existing_table`, then a `DataValidationException` is raised.
+`table_name`, then a `DataValidationException` is raised.
 """
 function _query_to_complement_with_defaults(
     connection,
     database_schema,
-    existing_table::String,
+    table_name::String,
     table_schema,
 )
     # Get all existing columns, we don't want to overwrite these
@@ -28,7 +73,7 @@ function _query_to_complement_with_defaults(
             connection,
             "SELECT column_name
             FROM duckdb_columns()
-            WHERE table_name = '$existing_table'
+            WHERE table_name = '$table_name'
                 AND schema_name = '$database_schema'
             ORDER BY column_index
             ",
@@ -36,7 +81,7 @@ function _query_to_complement_with_defaults(
     ]
 
     # prepare the query starting with the existing columns
-    query_select_arguments = ["$existing_table.$column_name" for column_name in existing_columns]
+    query_select_arguments = ["$table_name.$column_name" for column_name in existing_columns]
 
     # now for each column in the schema
     for (col_name, props) in table_schema
@@ -49,7 +94,7 @@ function _query_to_complement_with_defaults(
         if !haskey(props, "default")
             throw(
                 TulipaEnergyModel.DataValidationException([
-                    "Column '$col_name' of table '$existing_table' does not have a default",
+                    "Column '$col_name' of table '$table_name' does not have a default",
                 ]),
             )
         end
@@ -82,6 +127,9 @@ function populate_with_defaults!(connection)
                 continue
             end
 
+            # Get the table creation string
+            table_creation_string = _arguments_to_create_table(database_schema, table_schema)
+
             # Get the query string
             query_string = _query_to_complement_with_defaults(
                 connection,
@@ -92,10 +140,17 @@ function populate_with_defaults!(connection)
 
             DuckDB.query(
                 connection,
-                "CREATE OR REPLACE TABLE $database_schema.t_new_$table_name AS
+                "CREATE OR REPLACE TABLE $database_schema.t_new_$table_name
+                ($table_creation_string)",
+            )
+            DuckDB.query(
+                connection,
+                "INSERT INTO $database_schema.t_new_$table_name
+                BY NAME
                 SELECT $query_string
                 FROM $database_schema.$table_name",
             )
+
             # DROP TABLE OR VIEW
             is_table =
                 only([

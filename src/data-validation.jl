@@ -252,7 +252,7 @@ function _validate_group_consistency!(connection, database_schema_name_override 
             connection,
             input_schema,
             "asset",
-            :group,
+            :belongs_to_group,
             input_schema,
             "group_asset",
             :name,
@@ -263,16 +263,16 @@ function _validate_group_consistency!(connection, database_schema_name_override 
     for row in DuckDB.query(
         connection,
         "FROM (
-            SELECT group_asset.name, COUNT(asset.group) AS group_count
+            SELECT group_asset.name, COUNT(asset.belongs_to_group) AS group_count
             FROM $input_schema.group_asset as group_asset
             LEFT JOIN $input_schema.asset as asset
-                ON asset.group = group_asset.name
+                ON asset.belongs_to_group = group_asset.name
             GROUP BY group_asset.name
         ) WHERE group_count = 0",
     )
         push!(
             error_messages,
-            "Group '$(row.name)' in '$input_schema.group_asset' has no members in '$input_schema.asset', column 'group'",
+            "Group '$(row.name)' in '$input_schema.group_asset' has no members in '$input_schema.asset', column 'belongs_to_group'",
         )
     end
 

@@ -67,15 +67,15 @@ function _get_assets_in_group(connection, group)
         connection,
         "SELECT
             var.id,
-            asset.group,
+            asset.belongs_to_group,
             asset.capacity,
         FROM variables.assets_investment AS var
         JOIN input.asset as asset
             ON var.asset = asset.asset
         JOIN input.group_asset as group_asset
-            ON asset.group = group_asset.name
-        WHERE asset.group IS NOT NULL
-              AND  asset.group = '$group'
+            ON asset.belongs_to_group = group_asset.name
+        WHERE asset.belongs_to_group IS NOT NULL
+              AND  asset.belongs_to_group = '$group'
         ",
     )
 end
