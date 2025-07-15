@@ -1,6 +1,15 @@
+"""
+Modular test examples using TestItems.jl
+
+This file demonstrates advanced testing patterns including:
+- @testsnippet for shared setup code
+- @testmodule for utility functions
+- @testitem for individual test cases
+- Proper resource cleanup with try-finally blocks
+"""
+
 using TestItems
 
-# Test snippet for common setup
 @testsnippet CommonSetup begin
     using DuckDB: DuckDB, DBInterface
     using TulipaIO
@@ -13,68 +22,88 @@ using TestItems
         TulipaIO.read_csv_folder(connection, dir)
         return connection
     end
+
+    function cleanup_connection(connection)
+        DBInterface.close!(connection)
+        return
+    end
 end
 
-# Test module for shared utilities
 @testmodule TestUtils begin
     using Test, JuMP
 
-    export verify_objective_value, verify_feasible_solution
+    export verify_objective_value, verify_feasible_solution, verify_solution_status
 
     function verify_objective_value(energy_problem, expected_value; rtol = 1e-8, atol = 1e-5)
         @test energy_problem.objective_value ≈ expected_value rtol=rtol atol=atol
+        return
     end
 
     function verify_feasible_solution(energy_problem)
         @test JuMP.is_solved_and_feasible(energy_problem.model)
+        return
+    end
+
+    function verify_solution_status(energy_problem, expected_status)
+        @test JuMP.termination_status(energy_problem.model) == expected_status
+        return
     end
 end
 
-# Basic functionality tests
 @testitem "Basic EnergyProblem Creation" tags=[:basic, :model] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tiny")
-    energy_problem = TulipaEnergyModel.EnergyProblem(connection)
 
-    @test energy_problem isa TulipaEnergyModel.EnergyProblem
-    # Note: Model creation has some SQL issues, so we'll just test the struct creation
+    try
+        energy_problem = TulipaEnergyModel.EnergyProblem(connection)
+        @test energy_problem isa TulipaEnergyModel.EnergyProblem
+    finally
+        cleanup_connection(connection)
+    end
 end
 
 @testitem "Data Loading" tags=[:basic, :data] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tiny")
 
-    # Test that connection was created
-    @test connection isa DuckDB.DB
+    try
+        @test connection isa DuckDB.DB
 
-    # Test that required tables exist
-    tables = DuckDB.execute(connection, "SHOW TABLES") |> collect
-    table_names = [row[1] for row in tables]
+        tables = DuckDB.execute(connection, "SHOW TABLES") |> collect
+        table_names = [row[1] for row in tables]
 
-    @test "asset" in table_names
-    @test "flow" in table_names
+        @test "asset" in table_names
+        @test "flow" in table_names
+    finally
+        cleanup_connection(connection)
+    end
 end
 
 @testitem "Asset Data Validation" tags=[:basic, :validation] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tiny")
 
-    # Test that asset data exists
-    asset_data = DuckDB.execute(connection, "SELECT * FROM asset LIMIT 1") |> collect
-    @test length(asset_data) > 0
+    try
+        asset_data = DuckDB.execute(connection, "SELECT * FROM asset LIMIT 1") |> collect
+        @test length(asset_data) > 0
 
-    # Test that flow data exists
-    flow_data = DuckDB.execute(connection, "SELECT * FROM flow LIMIT 1") |> collect
-    @test length(flow_data) > 0
+        flow_data = DuckDB.execute(connection, "SELECT * FROM flow LIMIT 1") |> collect
+        @test length(flow_data) > 0
+    finally
+        cleanup_connection(connection)
+    end
 end
 
-# Simple case study test (from test-case-studies.jl)
 @testitem "Tinier Case Study" tags=[:case_study, :simple] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tinier")
-    TulipaEnergyModel.populate_with_defaults!(connection)
-    energy_problem = TulipaEnergyModel.run_scenario(connection; show_log = false)
 
-    @test energy_problem.objective_value ≈ 269238.43825 rtol=1e-8
+    try
+        TulipaEnergyModel.populate_with_defaults!(connection)
+        energy_problem = TulipaEnergyModel.run_scenario(connection; show_log = false)
 
-    # Test that populate_with_defaults doesn't change the solution
-    TulipaEnergyModel.populate_with_defaults!(connection)
-    energy_problem = TulipaEnergyModel.run_scenario(connection; show_log = false)
-    @test energy_problem.objective_value ≈ 269238.43825 rtol=1e-8
+        @test energy_problem.objective_value ≈ 269238.43825 rtol=1e-8
+
+        TulipaEnergyModel.populate_with_defaults!(connection)
+        energy_problem = TulipaEnergyModel.run_scenario(connection; show_log = false)
+        @test energy_problem.objective_value ≈ 269238.43825 rtol=1e-8
+    finally
+        cleanup_connection(connection)
+    end
 end
