@@ -50,7 +50,7 @@ end
     end
 end
 
-@testitem "Basic EnergyProblem Creation" tags=[:basic, :model] setup=[CommonSetup] begin
+@testitem "Basic EnergyProblem Creation" tags=[:unit, :fast] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tiny")
 
     try
@@ -61,7 +61,7 @@ end
     end
 end
 
-@testitem "Data Loading" tags=[:basic, :data] setup=[CommonSetup] begin
+@testitem "Data Loading" tags=[:unit, :fast] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tiny")
 
     try
@@ -77,7 +77,7 @@ end
     end
 end
 
-@testitem "Asset Data Validation" tags=[:basic, :validation] setup=[CommonSetup] begin
+@testitem "Asset Data Validation" tags=[:unit, :fast, :validation] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tiny")
 
     try
@@ -91,7 +91,7 @@ end
     end
 end
 
-@testitem "Tinier Case Study" tags=[:case_study, :simple] setup=[CommonSetup] begin
+@testitem "Tinier Case Study" tags=[:integration, :fast, :validation] setup=[CommonSetup] begin
     connection = setup_connection_and_read_data("Tinier")
 
     try

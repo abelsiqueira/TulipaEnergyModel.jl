@@ -1,10 +1,18 @@
 [tags]
-math = "MISSING_TAG_ERROR"
-simple = "Simple/fast tests"
-model = "Model creation and validation tests"
-basic = "Basic functionality tests"
-validation = "Validation and verification tests"
-module = "MISSING_TAG_ERROR"
-testing = "MISSING_TAG_ERROR"
-case_study = "Full case study tests"
-data = "Data loading and validation tests"
+# Test Type (What kind of test?)
+integration = "End-to-end tests with real datasets and full workflows"
+unit = "Single component or function tests"
+validation = "Tests verifying expected values, behavior, or mathematical correctness"
+
+# Complexity (How resource-intensive?)
+fast = "Quick tests suitable for frequent execution"
+slow = "Resource-intensive tests requiring significant time or memory"
+
+# Features (What energy modeling features?)
+storage = "Tests involving storage asset functionality"
+ramping = "Tests involving ramping constraint functionality"
+unit_commitment = "Tests involving unit commitment modeling"
+multi_year = "Tests involving multi-year investment planning"
+power_flow = "Tests involving power flow modeling"
+temporal = "Tests involving temporal resolution and modeling"
+optimization = "Tests comparing multiple optimizers or optimization behavior"
