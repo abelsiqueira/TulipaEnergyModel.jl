@@ -1,0 +1,10 @@
+[tags]
+math = "MISSING_TAG_ERROR"
+simple = "Simple/fast tests"
+model = "Model creation and validation tests"
+basic = "Basic functionality tests"
+validation = "Validation and verification tests"
+module = "MISSING_TAG_ERROR"
+testing = "MISSING_TAG_ERROR"
+case_study = "Full case study tests"
+data = "Data loading and validation tests"
