@@ -51,18 +51,19 @@ function add_capacity_constraints!(connection, model, expressions, constraints, 
             cons,
             :profile_times_capacity,
             [
-                @expression(
-                    model,
-                    row.capacity *
-                    _profile_aggregate(
+                begin
+                    profile_agg = _profile_aggregate(
                         profiles.rep_period,
                         (row.profile_name, row.year, row.rep_period),
                         row.time_block_start:row.time_block_end,
                         Statistics.mean,
                         1.0,
-                    ) *
-                    expr_avail_simple_method[row.avail_id]
-                ) for row in indices
+                    )
+                    @expression(
+                        model,
+                        row.capacity * profile_agg * expr_avail_simple_method[row.avail_id]
+                    )
+                end for row in indices
             ],
         )
     end
