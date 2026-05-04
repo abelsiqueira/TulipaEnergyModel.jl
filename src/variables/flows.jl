@@ -16,12 +16,16 @@ function add_flow_variables!(connection, model, variables)
             0.0
         end
 
+    function rowname(row)
+        from_asset, to_asset = row.from_asset::String, row.to_asset::String
+        milestone_year, rep_period = row.milestone_year::Int32, row.rep_period::Int32
+        tb_start, tb_end = row.time_block_start::Int32, row.time_block_end::Int32
+        return "flow[($from_asset,$to_asset),$milestone_year,$rep_period,$tb_start:$tb_end]"
+    end
+
     variables[:flow].container = [
-        @variable(
-            model,
-            lower_bound = lower_bound(row),
-            base_name = "flow[($(row.from_asset),$(row.to_asset)),$(row.milestone_year),$(row.rep_period),$(row.time_block_start):$(row.time_block_end)]"
-        ) for row in indices
+        @variable(model, lower_bound = lower_bound(row), base_name = rowname(row),) for
+        row in indices
     ]
 
     return
