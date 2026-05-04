@@ -6,11 +6,15 @@
 Check if table `table_name` exists in the connection.
 """
 function _check_if_table_exists(connection, table_name)
-    existence_query = DBInterface.execute(
-        connection,
-        "SELECT table_name FROM information_schema.tables WHERE table_name = '$table_name'",
-    )
-    return length(collect(existence_query)) > 0
+    count_table_name = only(
+        only(
+            DBInterface.execute(
+                connection,
+                "SELECT COUNT(table_name) FROM information_schema.tables WHERE table_name = '$table_name'",
+            ),
+        ),
+    )::Int
+    return count_table_name > 0
 end
 
 """
