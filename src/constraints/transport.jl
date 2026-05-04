@@ -118,7 +118,7 @@ function add_capacity_limits_transport_flows!(
             [
                 @constraint(
                     model,
-                    var_flow[row.var_flow_id] ≥ -lower_bound_transport_flow,
+                    lower_bound_transport_flow + var_flow[row.var_flow_id] ≥ 0,
                     base_name = "min_transport_flow_limit_simple_method[($(row.from_asset),$(row.to_asset)),$(row.milestone_year),$(row.rep_period),$(row.time_block_start):$(row.time_block_end)]"
                 ) for (row, lower_bound_transport_flow) in
                 zip(indices, cons.expressions[:lower_bound_transport_flow])
